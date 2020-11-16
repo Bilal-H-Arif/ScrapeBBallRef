@@ -1,0 +1,315 @@
+---
+title: "Prediction Software"
+author: "Bilal Arif"
+date: "31/10/2020"
+output: html_document
+---
+
+```{r}
+# Import Data Sets
+Data14 <- read.csv("/Users/bilalarif/Desktop/NBA2014FD.csv")
+Data15 <- read.csv("/Users/bilalarif/Desktop/NBA2015FD.csv")
+Data16 <- read.csv("/Users/bilalarif/Desktop/NBA2016FD.csv")
+Data17 <- read.csv("/Users/bilalarif/Desktop/NBA2017FD.csv")
+Data18 <- read.csv("/Users/bilalarif/Desktop/NBA2018FD.csv")
+Data19 <- read.csv("/Users/bilalarif/Desktop/NBA2019FD.csv")
+Data20 <- read.csv("/Users/bilalarif/Desktop/NBA2020FD.csv")
+
+# Replace NA with 0
+Data14[is.na(Data14)] <- 0
+Data15[is.na(Data15)] <- 0
+Data16[is.na(Data16)] <- 0
+Data17[is.na(Data17)] <- 0
+Data18[is.na(Data18)] <- 0
+Data19[is.na(Data19)] <- 0
+Data20[is.na(Data20)] <- 0
+
+# Keep First 58 Columns
+Data14 <- Data14[,1:58]
+Data15 <- Data15[,1:58]
+Data16 <- Data16[,1:58]
+Data17 <- Data17[,1:58]
+Data18 <- Data18[,1:58]
+Data19 <- Data19[,1:58]
+Data20 <- Data20[,1:58]
+
+# Bring Spread Data Sets
+S14 <- read.csv("/Users/bilalarif/Desktop/1314BO.csv")
+S15 <- read.csv("/Users/bilalarif/Desktop/1415BO.csv")
+S16 <- read.csv("/Users/bilalarif/Desktop/1516BO.csv")
+S17 <- read.csv("/Users/bilalarif/Desktop/1617BO.csv")
+S18 <- read.csv("/Users/bilalarif/Desktop/1718BO.csv")
+S19 <- read.csv("/Users/bilalarif/Desktop/1819BO.csv")
+S20 <- read.csv("/Users/bilalarif/Desktop/1920BO.csv")
+
+# Remove Columns from Spread Data Sets
+S14 <- S14[1:2460,c(5,6,9,13)]
+S15 <- S15[1:2460,c(5,6,9,13)]
+S16 <- S16[1:2460,c(5,6,9,13)]
+S17 <- S17[1:2460,c(5,6,9,13)]
+S18 <- S18[1:2460,c(5,6,9,13)]
+S19 <- S19[1:2460,c(5,6,9,13)]
+S20 <- S20[1:2118,c(5,6,9,13)]
+
+# Convert "pk" to 0
+levels(S14$X2H)[levels(S14$X2H)=='pk'] <- '0'
+levels(S15$X2H)[levels(S15$X2H)=='pk'] <- '0'
+levels(S16$X2H)[levels(S16$X2H)=='pk'] <- '0'
+levels(S17$X2H)[levels(S17$X2H)=='pk'] <- '0'
+levels(S18$X2H)[levels(S18$X2H)=='pk'] <- '0'
+levels(S19$X2H)[levels(S19$X2H)=='pk'] <- '0'
+levels(S20$X2H)[levels(S20$X2H)=='pk'] <- '0'
+
+# Convert Columns with Factors to Numeric
+S14$X2H <- as.numeric(as.character(S14$X2H))
+S15$X2H <- as.numeric(as.character(S15$X2H))
+S16$X2H <- as.numeric(as.character(S16$X2H)) 
+S17$X2H <- as.numeric(as.character(S17$X2H)) 
+S18$X2H <- as.numeric(as.character(S18$X2H)) 
+S19$X2H <- as.numeric(as.character(S19$X2H)) 
+S20$X2H <- as.numeric(as.character(S20$X2H)) 
+
+# Combine Visitor and Home Spread Data into Singular Rows
+for(i in 1:2460){if(i %% 2 == 0){S14[i-1, 5:8] <- S14[i,1:4]}}
+for(i in 1:2460){if(i %% 2 == 0){S15[i-1, 5:8] <- S15[i,1:4]}}
+for(i in 1:2460){if(i %% 2 == 0){S16[i-1, 5:8] <- S16[i,1:4]}}
+for(i in 1:2460){if(i %% 2 == 0){S17[i-1, 5:8] <- S17[i,1:4]}}
+for(i in 1:2460){if(i %% 2 == 0){S18[i-1, 5:8] <- S18[i,1:4]}}
+for(i in 1:2460){if(i %% 2 == 0){S19[i-1, 5:8] <- S19[i,1:4]}}
+for(i in 1:2118){if(i %% 2 == 0){S20[i-1, 5:8] <- S20[i,1:4]}}
+
+# Remove Even Rows
+S14 <- S14[seq(1,nrow(S14),2),]
+S15 <- S15[seq(1,nrow(S15),2),]
+S16 <- S16[seq(1,nrow(S16),2),]
+S17 <- S17[seq(1,nrow(S17),2),]
+S18 <- S18[seq(1,nrow(S18),2),]
+S19 <- S19[seq(1,nrow(S19),2),]
+S20 <- S20[seq(1,nrow(S20),2),]
+
+# Create a New Column for Ease
+S14[9] <- S14[4]
+S14[10] <- S14[8]
+S15[9] <- S15[4]
+S15[10] <- S15[8]
+S16[9] <- S16[4]
+S16[10] <- S16[8]
+S17[9] <- S17[4]
+S17[10] <- S17[8]
+S18[9] <- S18[4]
+S18[10] <- S18[8]
+S19[9] <- S19[4]
+S19[10] <- S19[8]
+S20[9] <- S20[4]
+S20[10] <- S20[8]
+
+# Rename Columns for Simplicity
+S14 <- setNames(S14, c("A.Q1", "A.Q2", "A.F", "X2H", "H.Q1", "H.Q2", "H.F", "SHT", "A2S", "H2S"))
+S15 <- setNames(S15, c("A.Q1", "A.Q2", "A.F", "X2H", "H.Q1", "H.Q2", "H.F", "SHT", "A2S", "H2S"))
+S16 <- setNames(S16, c("A.Q1", "A.Q2", "A.F", "X2H", "H.Q1", "H.Q2", "H.F", "SHT", "A2S", "H2S"))
+S17 <- setNames(S17, c("A.Q1", "A.Q2", "A.F", "X2H", "H.Q1", "H.Q2", "H.F", "SHT", "A2S", "H2S"))
+S18 <- setNames(S18, c("A.Q1", "A.Q2", "A.F", "X2H", "H.Q1", "H.Q2", "H.F", "SHT", "A2S", "H2S"))
+S19 <- setNames(S19, c("A.Q1", "A.Q2", "A.F", "X2H", "H.Q1", "H.Q2", "H.F", "SHT", "A2S", "H2S"))
+S20 <- setNames(S20, c("A.Q1", "A.Q2", "A.F", "X2H", "H.Q1", "H.Q2", "H.F", "SHT", "A2S", "H2S"))
+
+# Make Data More Usable
+for(i in 1:1230){if(S14[i, 4] < 50){S14[i,4] <- S14[i,4] * -1}else{S14[i,8] <- S14[i,8] * -1}}
+for(i in 1:1230){if(S15[i, 4] < 50){S15[i,4] <- S15[i,4] * -1}else{S15[i,8] <- S15[i,8] * -1}}
+for(i in 1:1230){if(S16[i, 4] < 50){S16[i,4] <- S16[i,4] * -1}else{S16[i,8] <- S16[i,8] * -1}}
+for(i in 1:1230){if(S17[i, 4] < 50){S17[i,4] <- S17[i,4] * -1}else{S17[i,8] <- S17[i,8] * -1}}
+for(i in 1:1230){if(S18[i, 4] < 50){S18[i,4] <- S18[i,4] * -1}else{S18[i,8] <- S18[i,8] * -1}}
+for(i in 1:1230){if(S19[i, 4] < 50){S19[i,4] <- S19[i,4] * -1}else{S19[i,8] <- S19[i,8] * -1}}
+for(i in 1:1059){if(S20[i, 4] < 50){S20[i,4] <- S20[i,4] * -1}else{S20[i,8] <- S20[i,8] * -1}}
+
+# Create Away and Home Second Half Spread Columns
+for(i in 1:1230){if(S14[i, 4] < 50){
+    S14[i,9]  <- S14[i,4]
+    S14[i,10] <- S14[i,4] * -1}else{
+    S14[i,9]  <- S14[i,8] * -1
+    S14[i,10] <- S14[i,8]
+    S14[i,8]  <- S14[i,4]}}
+
+for(i in 1:1230){if(S15[i, 4] < 50){
+    S15[i,9]  <- S15[i,4]
+    S15[i,10] <- S15[i,4] * -1}else{
+    S15[i,9]  <- S15[i,8] * -1
+    S15[i,10] <- S15[i,8]
+    S15[i,8]  <- S15[i,4]}}
+
+for(i in 1:1230){if(S16[i, 4] < 50){
+    S16[i,9]  <- S16[i,4]
+    S16[i,10] <- S16[i,4] * -1}else{
+    S16[i,9]  <- S16[i,8] * -1
+    S16[i,10] <- S16[i,8]
+    S16[i,8]  <- S16[i,4]}}
+
+for(i in 1:1230){if(S17[i, 4] < 50){
+    S17[i,9]  <- S17[i,4]
+    S17[i,10] <- S17[i,4] * -1}else{
+    S17[i,9]  <- S17[i,8] * -1
+    S17[i,10] <- S17[i,8]
+    S17[i,8]  <- S17[i,4]}}
+
+for(i in 1:1230){if(S18[i, 4] < 50){
+    S18[i,9]  <- S18[i,4]
+    S18[i,10] <- S18[i,4] * -1}else{
+    S18[i,9]  <- S18[i,8] * -1
+    S18[i,10] <- S18[i,8]
+    S18[i,8]  <- S18[i,4]}}
+
+for(i in 1:1230){if(S19[i, 4] < 50){
+    S19[i,9]  <- S19[i,4]
+    S19[i,10] <- S19[i,4] * -1}else{
+    S19[i,9]  <- S19[i,8] * -1
+    S19[i,10] <- S19[i,8]
+    S19[i,8]  <- S19[i,4]}}
+
+for(i in 1:1059){if(S20[i, 4] < 50){
+    S20[i,9]  <- S20[i,4]
+    S20[i,10] <- S20[i,4] * -1}else{
+    S20[i,9]  <- S20[i,8] * -1
+    S20[i,10] <- S20[i,8]
+    S20[i,8]  <- S20[i,4]}}
+
+# Remove and Rearrange Columns
+S14 <- S14[, c(1,2,5,6,3,7:10)]
+S15 <- S15[, c(1,2,5,6,3,7:10)]
+S16 <- S16[, c(1,2,5,6,3,7:10)]
+S17 <- S17[, c(1,2,5,6,3,7:10)]
+S18 <- S18[, c(1,2,5,6,3,7:10)]
+S19 <- S19[, c(1,2,5,6,3,7:10)]
+S20 <- S20[, c(1,2,5,6,3,7:10)]
+
+# Create New Columns
+S14$`AHP` <- S14$A.Q1 + S14$A.Q2
+S14$`HHP` <- S14$H.Q1 + S14$H.Q2
+S15$`AHP` <- S15$A.Q1 + S15$A.Q2
+S15$`HHP` <- S15$H.Q1 + S15$H.Q2
+S16$`AHP` <- S16$A.Q1 + S16$A.Q2
+S16$`HHP` <- S16$H.Q1 + S16$H.Q2
+S17$`AHP` <- S17$A.Q1 + S17$A.Q2
+S17$`HHP` <- S17$H.Q1 + S17$H.Q2
+S18$`AHP` <- S18$A.Q1 + S18$A.Q2
+S18$`HHP` <- S18$H.Q1 + S18$H.Q2
+S19$`AHP` <- S19$A.Q1 + S19$A.Q2
+S19$`HHP` <- S19$H.Q1 + S19$H.Q2
+S20$`AHP` <- S20$A.Q1 + S20$A.Q2
+S20$`HHP` <- S20$H.Q1 + S20$H.Q2
+
+# Create New Column in Spread and Data (Trying to Make Unique IDs essentially)
+S14$`Comb` <- (100*S14$A.F) + (S14$H.F) + (.1 * S14$AHP) + (.001 * S14$HHP) 
+S15$`Comb` <- (100*S15$A.F) + (S15$H.F) + (.1 * S15$AHP) + (.001 * S15$HHP) 
+S16$`Comb` <- (100*S16$A.F) + (S16$H.F) + (.1 * S16$AHP) + (.001 * S16$HHP) 
+S17$`Comb` <- (100*S17$A.F) + (S17$H.F) + (.1 * S17$AHP) + (.001 * S17$HHP) 
+S18$`Comb` <- (100*S18$A.F) + (S18$H.F) + (.1 * S18$AHP) + (.001 * S18$HHP) 
+S19$`Comb` <- (100*S19$A.F) + (S19$H.F) + (.1 * S19$AHP) + (.001 * S19$HHP) 
+S20$`Comb` <- (100*S20$A.F) + (S20$H.F) + (.1 * S20$AHP) + (.001 * S20$HHP) 
+
+Data14$`Comb` <- (100*Data14$A.F) + (Data14$H.F) + (.1 * Data14$A.H.Pts) + (.001 * Data14$H.H.Pts) 
+Data15$`Comb` <- (100*Data15$A.F) + (Data15$H.F) + (.1 * Data15$A.H.Pts) + (.001 * Data15$H.H.Pts) 
+Data16$`Comb` <- (100*Data16$A.F) + (Data16$H.F) + (.1 * Data16$A.H.Pts) + (.001 * Data16$H.H.Pts) 
+Data17$`Comb` <- (100*Data17$A.F) + (Data17$H.F) + (.1 * Data17$A.H.Pts) + (.001 * Data17$H.H.Pts) 
+Data18$`Comb` <- (100*Data18$A.F) + (Data18$H.F) + (.1 * Data18$A.H.Pts) + (.001 * Data18$H.H.Pts) 
+Data19$`Comb` <- (100*Data19$A.F) + (Data19$H.F) + (.1 * Data19$A.H.Pts) + (.001 * Data19$H.H.Pts) 
+Data20$`Comb` <- (100*Data20$A.F) + (Data20$H.F) + (.1 * Data20$A.H.Pts) + (.001 * Data20$H.H.Pts) 
+
+# Arrange by Comb 
+S14 <- arrange(S14, Comb)
+S15 <- arrange(S15, Comb)
+S16 <- arrange(S16, Comb)
+S17 <- arrange(S17, Comb)
+S18 <- arrange(S18, Comb)
+S19 <- arrange(S19, Comb)
+S20 <- arrange(S20, Comb)
+Data14 <- arrange(Data14, Comb)
+Data15 <- arrange(Data15, Comb)
+Data16 <- arrange(Data16, Comb)
+Data17 <- arrange(Data17, Comb)
+Data18 <- arrange(Data18, Comb)
+Data19 <- arrange(Data19, Comb)
+Data20 <- arrange(Data20, Comb)
+
+# Bind by Comb
+if(S14$Comb == Data14$Comb & S14$HHP == Data14$H.H.Pts){
+    Data14[60] <- S14$A2S
+    Data14[61] <- S14$H2S
+    Data14[62] <- S14$SHT}
+
+if(S15$Comb == Data15$Comb & S15$HHP == Data15$H.H.Pts){
+    Data15[60] <- S15$A2S
+    Data15[61] <- S15$H2S
+    Data15[62] <- S15$SHT}
+
+if(S16$Comb == Data16$Comb & S16$HHP == Data16$H.H.Pts){
+    Data16[60] <- S16$A2S
+    Data16[61] <- S16$H2S
+    Data16[62] <- S16$SHT}
+
+if(S17$Comb == Data17$Comb & S17$HHP == Data17$H.H.Pts){
+    Data17[60] <- S17$A2S
+    Data17[61] <- S17$H2S
+    Data17[62] <- S17$SHT}
+
+if(S18$Comb == Data18$Comb & S18$HHP == Data18$H.H.Pts){
+    Data18[60] <- S18$A2S
+    Data18[61] <- S18$H2S
+    Data18[62] <- S18$SHT}
+
+if(S19$Comb == Data19$Comb & S19$HHP == Data19$H.H.Pts){
+    Data19[60] <- S19$A2S
+    Data19[61] <- S19$H2S
+    Data19[62] <- S19$SHT}
+
+if(S20$Comb == Data20$Comb & S20$HHP == Data20$H.H.Pts){
+    Data20[60] <- S20$A2S
+    Data20[61] <- S20$H2S
+    Data20[62] <- S20$SHT}
+
+
+# Rename Last Three Columns
+Data14 <- setNames(Data14, replace(names(Data14), names(Data14) == 'V60', 'A2S'))
+Data14 <- setNames(Data14, replace(names(Data14), names(Data14) == 'V61', 'H2S'))
+Data14 <- setNames(Data14, replace(names(Data14), names(Data14) == 'V62', 'SHT'))
+
+Data15 <- setNames(Data15, replace(names(Data15), names(Data15) == 'V60', 'A2S'))
+Data15 <- setNames(Data15, replace(names(Data15), names(Data15) == 'V61', 'H2S'))
+Data15 <- setNames(Data15, replace(names(Data15), names(Data15) == 'V62', 'SHT'))
+
+Data16 <- setNames(Data16, replace(names(Data16), names(Data16) == 'V60', 'A2S'))
+Data16 <- setNames(Data16, replace(names(Data16), names(Data16) == 'V61', 'H2S'))
+Data16 <- setNames(Data16, replace(names(Data16), names(Data16) == 'V62', 'SHT'))
+
+Data17 <- setNames(Data17, replace(names(Data17), names(Data17) == 'V60', 'A2S'))
+Data17 <- setNames(Data17, replace(names(Data17), names(Data17) == 'V61', 'H2S'))
+Data17 <- setNames(Data17, replace(names(Data17), names(Data17) == 'V62', 'SHT'))
+
+Data18 <- setNames(Data18, replace(names(Data18), names(Data18) == 'V60', 'A2S'))
+Data18 <- setNames(Data18, replace(names(Data18), names(Data18) == 'V61', 'H2S'))
+Data18 <- setNames(Data18, replace(names(Data18), names(Data18) == 'V62', 'SHT'))
+
+Data19 <- setNames(Data19, replace(names(Data19), names(Data19) == 'V60', 'A2S'))
+Data19 <- setNames(Data19, replace(names(Data19), names(Data19) == 'V61', 'H2S'))
+Data19 <- setNames(Data19, replace(names(Data19), names(Data19) == 'V62', 'SHT'))
+
+Data20 <- setNames(Data20, replace(names(Data20), names(Data20) == 'V60', 'A2S'))
+Data20 <- setNames(Data20, replace(names(Data20), names(Data20) == 'V61', 'H2S'))
+Data20 <- setNames(Data20, replace(names(Data20), names(Data20) == 'V62', 'SHT'))
+
+# Remove Comb Column from Data (It's Purpose Was to Simplify Binding)
+Data14 <- Data14[,-c(59)]
+Data15 <- Data15[,-c(59)]
+Data16 <- Data16[,-c(59)]
+Data17 <- Data17[,-c(59)]
+Data18 <- Data18[,-c(59)]
+Data19 <- Data19[,-c(59)]
+Data20 <- Data20[,-c(59)]
+
+# Export Files  
+write.csv(Data14,"/Users/bilalarif/Desktop/NBA2014FD.csv", row.names = FALSE)
+write.csv(Data15,"/Users/bilalarif/Desktop/NBA2015FD.csv", row.names = FALSE)
+write.csv(Data16,"/Users/bilalarif/Desktop/NBA2016FD.csv", row.names = FALSE)
+write.csv(Data17,"/Users/bilalarif/Desktop/NBA2017FD.csv", row.names = FALSE)
+write.csv(Data18,"/Users/bilalarif/Desktop/NBA2018FD.csv", row.names = FALSE)
+write.csv(Data19,"/Users/bilalarif/Desktop/NBA2019FD.csv", row.names = FALSE)
+write.csv(Data20,"/Users/bilalarif/Desktop/NBA2020FD.csv", row.names = FALSE)
+```

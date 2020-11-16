@@ -1,0 +1,285 @@
+---
+title: "Scraping Data"
+output: html_notebook
+---
+```{r Packages}
+library(rvest)
+library(lubridate)
+library(dplyr)
+```
+
+```{r}
+year <- "2018"
+monthList <- c("october", "november", "december", "january", "february", "march", "april", "may", "june")
+playoff_startDate <- ymd("2018-04-13")
+
+df <- data.frame()
+for (month in monthList) {
+    # get webpage
+    url <- paste0("https://www.basketball-reference.com/leagues/NBA_", year, 
+                  "_games-", month, ".html")
+    webpage <- read_html(url)
+    
+    # get column names
+    col_names <- webpage %>% 
+        html_nodes("table#schedule > thead > tr > th") %>% 
+        html_attr("data-stat")    
+    col_names <- c("game_id", col_names)
+    
+    # extract dates column
+    dates <- webpage %>% 
+        html_nodes("table#schedule > tbody > tr > th") %>% 
+        html_text()
+    dates <- dates[dates != "Playoffs"]
+    
+    # extract game id
+    # we need to remove the NA that is due to the "Playoffs" row in april
+    game_id <- webpage %>% 
+        html_nodes("table#schedule > tbody > tr > th") %>%
+        html_attr("csk")
+    game_id <- game_id[!is.na(game_id)]
+    
+    # extract all columns (except date)
+    data <- webpage %>% 
+        html_nodes("table#schedule > tbody > tr > td") %>% 
+        html_text() %>%
+        matrix(ncol = length(col_names) - 2, byrow = TRUE)
+    
+    # combine game IDs, dates and columns in dataframe for this month, add col names
+    month_df <- as.data.frame(cbind(game_id, dates, data), stringsAsFactors = FALSE)
+    names(month_df) <- col_names
+    
+    # add to overall dataframe
+    df <- rbind(df, month_df)
+}
+
+# change columns to the correct types
+df$visitor_pts <- as.numeric(df$visitor_pts)
+df$home_pts    <- as.numeric(df$home_pts)
+df$attendance  <- as.numeric(gsub(",", "", df$attendance))
+df$date_game   <- mdy(df$date_game)
+
+df$game_type <- with(df, ifelse(date_game >= playoff_startDate, 
+                                "Playoff", "Regular"))
+
+df$box_score_text <- NULL
+```
+
+```{r Shorten Team Names}
+df$visitor_team_name[df$visitor_team_name=="Atlanta Hawks"] <- "ATL"
+df$home_team_name[df$home_team_name=="Atlanta Hawks"] <- "ATL"
+df$visitor_team_name[df$visitor_team_name=="Boston Celtics"] <- "BOS"
+df$home_team_name[df$home_team_name=="Boston Celtics"] <- "BOS"
+df$visitor_team_name[df$visitor_team_name=="Brooklyn Nets"] <- "BRK"
+df$home_team_name[df$home_team_name=="Brooklyn Nets"] <- "BRK"
+df$visitor_team_name[df$visitor_team_name=="Charlotte Hornets"] <- "CHO"
+df$home_team_name[df$home_team_name=="Charlotte Hornets"] <- "CHO"
+df$visitor_team_name[df$visitor_team_name=="Chicago Bulls"] <- "CHI"
+df$home_team_name[df$home_team_name=="Chicago Bulls"] <- "CHI"
+df$visitor_team_name[df$visitor_team_name=="Cleveland Cavaliers"] <- "CLE"
+df$home_team_name[df$home_team_name=="Cleveland Cavaliers"] <- "CLE"
+df$visitor_team_name[df$visitor_team_name=="Dallas Mavericks"] <- "DAL"
+df$home_team_name[df$home_team_name=="Dallas Mavericks"] <- "DAL"
+df$visitor_team_name[df$visitor_team_name=="Denver Nuggets"] <- "DEN"
+df$home_team_name[df$home_team_name=="Denver Nuggets"] <- "DEN"
+df$visitor_team_name[df$visitor_team_name=="Detroit Pistons"] <- "DET"
+df$home_team_name[df$home_team_name=="Detroit Pistons"] <- "DET"
+df$visitor_team_name[df$visitor_team_name=="Golden State Warriors"] <- "GSW"
+df$home_team_name[df$home_team_name=="Golden State Warriors"] <- "GSW"
+df$visitor_team_name[df$visitor_team_name=="Houston Rockets"] <- "HOU"
+df$home_team_name[df$home_team_name=="Houston Rockets"] <- "HOU"
+df$visitor_team_name[df$visitor_team_name=="Indiana Pacers"] <- "IND"
+df$home_team_name[df$home_team_name=="Indiana Pacers"] <- "IND"
+df$visitor_team_name[df$visitor_team_name=="Los Angeles Clippers"] <- "LAC"
+df$home_team_name[df$home_team_name=="Los Angeles Clippers"] <- "LAC"
+df$visitor_team_name[df$visitor_team_name=="Los Angeles Lakers"] <- "LAL"
+df$home_team_name[df$home_team_name=="Los Angeles Lakers"] <- "LAL"
+df$visitor_team_name[df$visitor_team_name=="Memphis Grizzlies"] <- "MEM"
+df$home_team_name[df$home_team_name=="Memphis Grizzlies"] <- "MEM"
+df$visitor_team_name[df$visitor_team_name=="Miami Heat"] <- "MIA"
+df$home_team_name[df$home_team_name=="Miami Heat"] <- "MIA"
+df$visitor_team_name[df$visitor_team_name=="Milwaukee Bucks"] <- "MIL"
+df$home_team_name[df$home_team_name=="Milwaukee Bucks"] <- "MIL"
+df$visitor_team_name[df$visitor_team_name=="Minnesota Timberwolves"] <- "MIN"
+df$home_team_name[df$home_team_name=="Minnesota Timberwolves"] <- "MIN"
+df$visitor_team_name[df$visitor_team_name=="New Orleans Pelicans"] <- "NOP"
+df$home_team_name[df$home_team_name=="New Orleans Pelicans"] <- "NOP"
+df$visitor_team_name[df$visitor_team_name=="New York Knicks"] <- "NYK"
+df$home_team_name[df$home_team_name=="New York Knicks"] <- "NYK"
+df$visitor_team_name[df$visitor_team_name=="Oklahoma City Thunder"] <- "OKC"
+df$home_team_name[df$home_team_name=="Oklahoma City Thunder"] <- "OKC"
+df$visitor_team_name[df$visitor_team_name=="Orlando Magic"] <- "ORL"
+df$home_team_name[df$home_team_name=="Orlando Magic"] <- "ORL"
+df$visitor_team_name[df$visitor_team_name=="Philadelphia 76ers"] <- "PHI"
+df$home_team_name[df$home_team_name=="Philadelphia 76ers"] <- "PHI"
+df$visitor_team_name[df$visitor_team_name=="Phoenix Suns"] <- "PHO"
+df$home_team_name[df$home_team_name=="Phoenix Suns"] <- "PHO"
+df$visitor_team_name[df$visitor_team_name=="Portland Trail Blazers"] <- "POR"
+df$home_team_name[df$home_team_name=="Portland Trail Blazers"] <- "POR"
+df$visitor_team_name[df$visitor_team_name=="Sacramento Kings"] <- "SAC"
+df$home_team_name[df$home_team_name=="Sacramento Kings"] <- "SAC"
+df$visitor_team_name[df$visitor_team_name=="San Antonio Spurs"] <- "SAS"
+df$home_team_name[df$home_team_name=="San Antonio Spurs"] <- "SAS"
+df$visitor_team_name[df$visitor_team_name=="Toronto Raptors"] <- "TOR"
+df$home_team_name[df$home_team_name=="Toronto Raptors"] <- "TOR"
+df$visitor_team_name[df$visitor_team_name=="Utah Jazz"] <- "UTA"
+df$home_team_name[df$home_team_name=="Utah Jazz"] <- "UTA"
+df$visitor_team_name[df$visitor_team_name=="Washington Wizards"] <- "WAS"
+df$home_team_name[df$home_team_name=="Washington Wizards"] <- "WAS"
+df <- subset(df, df$game_type == "Regular")
+```
+
+```{r Preparation to Scarpe}
+df$`URL` <- paste0("https://www.basketball-reference.com/boxscores/shot-chart/", df$game_id, ".html")
+df$`Web` <- paste0("https://www.basketball-reference.com/boxscores/", df$game_id, ".html")
+df$`CSS1` <- paste0("#shooting-", df$home_team_name)
+df$`CSS2` <- paste0("#shooting-", df$visitor_team_name)
+df2 <- select(df, "URL", "CSS1", "CSS2", "Web")
+NBAData <- data_frame()
+```
+
+```{r Scrape Halftime Data}
+for (i in 1:1230) {
+  HTeam <- df2[i, 2]
+  ATeam <- df2[i, 3]
+  
+  Data.H <- df2[i,1] %>% 
+    read_html() %>% 
+    html_node(css = HTeam) %>% 
+    html_table() 
+  Data.A <- df2[i,1] %>% 
+    read_html() %>% 
+    html_node(css = ATeam) %>% 
+    html_table() %>% 
+    as_tibble()
+  
+  NBAData[i, 1:12]  <- Data.H[1,2:13]
+  NBAData[i, 13:24] <- Data.H[2,2:13]
+  NBAData[i, 25:36] <- Data.A[1,2:13]
+  NBAData[i, 37:48] <- Data.A[2,2:13]
+  NBAData[i,49] <- df[i, 5]
+  NBAData[i,50] <- df[i, 7]
+  }
+```
+
+```{r Prepare Variables to Get FTA/FTM}
+  df$`CS1` <- paste0("#box-", df$home_team_name, "-h1-basic")
+  df$`CS2` <- paste0("#box-", df$visitor_team_name, "-h1-basic")
+  df$`CS3` <- paste0("#box-", df$home_team_name, "-h2-basic")
+  df$`CS4` <- paste0("#box-", df$visitor_team_name, "-h2-basic")
+```
+
+```{r Scrape Halftime FTM/FTA Data and 2H Points}
+for (i in 1:1230) {
+  HTeam <- df[i, 16]
+  ATeam <- df[i, 17]
+  
+  Data.H <- df2[i,4] %>% 
+    read_html() %>% 
+    html_node(css = HTeam) %>% 
+    html_table()
+  
+  Data.A <- df2[i,4] %>% 
+    read_html() %>% 
+    html_node(css = ATeam) %>% 
+    html_table()
+
+  NBAData[i, 51]  <- Data.H[nrow(Data.H),9]
+  NBAData[i, 52]  <- Data.H[nrow(Data.H),10]
+  NBAData[i, 53]  <- Data.A[nrow(Data.A),9]
+  NBAData[i, 54]  <- Data.A[nrow(Data.A),10]
+
+  HTeam <- df[i, 18]
+  ATeam <- df[i, 19]
+   
+   Data.H <- df2[i,4] %>% 
+    read_html() %>% 
+    html_node(css = HTeam) %>% 
+    html_table()
+  
+  Data.A <- df2[i,4] %>% 
+    read_html() %>% 
+    html_node(css = ATeam) %>% 
+    html_table()  
+  
+  NBAData[i, 55]  <- Data.H[nrow(Data.H),20]
+  NBAData[i, 56]  <- Data.A[nrow(Data.A),20]  
+  }
+```
+
+```{r}
+Data <- NBAData
+# Rename Columns for Simplicity 
+names(Data)[1] <- "H.Q1.FGM"
+names(Data)[2] <- "H.Q1.FGA"
+names(Data)[3] <- "H.Q1.FGP"
+names(Data)[4] <- "H.Q1.2PM"
+names(Data)[5] <- "H.Q1.2PA"
+names(Data)[6] <- "H.Q1.2PP"
+names(Data)[7] <- "H.Q1.3PM"
+names(Data)[8] <- "H.Q1.3PA"
+names(Data)[9] <- "H.Q1.3PP"
+names(Data)[10] <- "H.Q1.eFG"
+names(Data)[11] <- "H.Q1.Ast"
+names(Data)[12] <- "H.Q1.AstP"
+names(Data)[13] <- "H.Q2.FGM"
+names(Data)[14] <- "H.Q2.FGA"
+names(Data)[15] <- "H.Q2.FGP"
+names(Data)[16] <- "H.Q2.2PM"
+names(Data)[17] <- "H.Q2.2PA"
+names(Data)[18] <- "H.Q2.2PP"
+names(Data)[19] <- "H.Q2.3PM"
+names(Data)[20] <- "H.Q2.3PA"
+names(Data)[21] <- "H.Q2.3PP"
+names(Data)[22] <- "H.Q2.eFG"
+names(Data)[23] <- "H.Q2.Ast"
+names(Data)[24] <- "H.Q2.AstP"
+names(Data)[25] <- "A.Q1.FGM"
+names(Data)[26] <- "A.Q1.FGA"
+names(Data)[27] <- "A.Q1.FGP"
+names(Data)[28] <- "A.Q1.2PM"
+names(Data)[29] <- "A.Q1.2PA"
+names(Data)[30] <- "A.Q1.2PP"
+names(Data)[31] <- "A.Q1.3PM"
+names(Data)[32] <- "A.Q1.3PA"
+names(Data)[33] <- "A.Q1.3PP"
+names(Data)[34] <- "A.Q1.eFG"
+names(Data)[35] <- "A.Q1.Ast"
+names(Data)[36] <- "A.Q1.AstP"
+names(Data)[37] <- "A.Q2.FGM"
+names(Data)[38] <- "A.Q2.FGA"
+names(Data)[39] <- "A.Q2.FGP"
+names(Data)[40] <- "A.Q2.2PM"
+names(Data)[41] <- "A.Q2.2PA"
+names(Data)[42] <- "A.Q2.2PP"
+names(Data)[43] <- "A.Q2.3PM"
+names(Data)[44] <- "A.Q2.3PA"
+names(Data)[45] <- "A.Q2.3PP"
+names(Data)[46] <- "A.Q2.eFG"
+names(Data)[47] <- "A.Q2.Ast"
+names(Data)[48] <- "A.Q2.AstP"
+names(Data)[49] <- "A.F"
+names(Data)[50] <- "H.F"
+names(Data)[51] <- "H.FTM"
+names(Data)[52] <- "H.FTA"
+names(Data)[53] <- "A.FTM"
+names(Data)[54] <- "A.FTA"
+names(Data)[55] <- "H.2H.Scoring"
+names(Data)[56] <- "A.2H.Scoring"
+
+# Convert Columns with Character to Numeric
+Data$H.FTM <- as.numeric(Data$H.FTM)
+Data$H.FTA <- as.numeric(Data$H.FTA)
+Data$H.2H.Scoring <- as.numeric(Data$H.2H.Scoring)
+Data$A.FTM <- as.numeric(Data$A.FTM)
+Data$A.FTA <- as.numeric(Data$A.FTA)
+Data$A.2H.Scoring <- as.numeric(Data$A.2H.Scoring)
+
+# Create Columns for First Half Scoring
+Data$`A.H.Pts` <- (2 * (Data$A.Q1.2PM+Data$A.Q2.2PM)) + (3 * (Data$A.Q1.3PM+Data$A.Q2.3PM)) + (Data$A.FTM)
+Data$`H.H.Pts` <- (2 * (Data$H.Q1.2PM+Data$H.Q2.2PM)) + (3 * (Data$H.Q1.3PM+Data$H.Q2.3PM)) + (Data$H.FTM)
+```
+
+```{r Save Data to Desktop as CSV}
+write.csv(Data,"/Users/bilalarif/Desktop/NBA2018FD.csv", row.names = FALSE)
+```

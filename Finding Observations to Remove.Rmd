@@ -1,0 +1,310 @@
+---
+title: "Seperating Data by Possessions"
+author: "Bilal Arif"
+date: "02/11/2020"
+output: html_document
+---
+
+```{r}
+# Import Data
+DF1 <- read.csv("/Users/bilalarif/Desktop/NBA2019FD.csv")
+DF2 <- read.csv("/Users/bilalarif/Desktop/NBA2018FD.csv")
+DF3 <- read.csv("/Users/bilalarif/Desktop/NBA2017FD.csv")
+DF4 <- read.csv("/Users/bilalarif/Desktop/NBA2016FD.csv")
+DF5 <- read.csv("/Users/bilalarif/Desktop/NBA2015FD.csv")
+
+# Combine Seasons into One Data Frame
+Data <- rbind(DF1, DF2, DF3, DF4, DF5)
+
+# Clear Environment 
+rm(DF1, DF2, DF3, DF4, DF5)
+
+# Create a Full Game Spread using Second Half Spread
+Data$`ATS` <- Data$H.H.Pts - Data$A.H.Pts + Data$A2S
+Data$`HTS` <- Data$A.H.Pts - Data$H.H.Pts + Data$H2S
+
+# Create Column of Spread Winner
+for (i in 1:6150) {
+  if(Data[i,49] + Data[i, 62] > Data[i, 50]){
+    Data[i, 64] <- 'A'
+  }else if(Data[i,49] + Data[i, 62] == Data[i, 50]){
+    Data[i,64] <- 'D'
+  }else{Data[i, 64] <- 'H'}}
+
+# Rename Column to Spread Winner 
+names(Data)[64] <- "SpreadWinner" 
+
+# Remove Rows with Draws
+Data <- Data[Data$SpreadWinner != 'D',]
+
+# Remove A2S and H2S Columns
+Data <- Data[, -c(59, 60)]
+
+# Remove Home and Away Quarter 1 and 2 FGM/FGA/FGP
+Data <- Data[, -c(1:3, 13:15, 25:27, 37:39)]
+
+# Create a Column of Total First Half Points
+Data$`TFHP` <- Data$H.H.Pts + Data$A.H.Pts
+
+# Remove Extreme High/Low Scoring First Halves (Top/Bottom 15%)
+
+# Separate Home and Away Data
+Home <- Data[,c( 1:18,39:40,43,49)]
+Away <- Data[,c(19:36,41:42,44,48)]
+
+# Seperate Data Sets by Spreads
+Away02 <-  Away[Away$ATS < 6.5 & Away$ATS > -6.5, ]
+Away24 <-  Away[Away$ATS > 6 & Away$ATS < 12.5 | Away$ATS > -12.5 & Away$ATS < -6, ]
+Away46 <-  Away[Away$ATS > 12 & Away$ATS < 18.5 | Away$ATS > -18.5 & Away$ATS < -12, ]
+Away610 <- Away[Away$ATS > 18 & Away$ATS < 50.5 | Away$ATS > -50.5 & Away$ATS < -18, ]
+
+Home02 <-  Home[Home$HTS < 6.5 & Home$HTS > -6.5, ]
+Home24 <-  Home[Home$HTS > 6 & Home$HTS < 12.5 | Home$HTS > -12.5 & Home$HTS < -6, ]
+Home46 <-  Home[Home$HTS > 12 & Home$HTS < 18.5 | Home$HTS > -18.5 & Home$HTS < -12, ]
+Home610 <- Home[Home$HTS > 18 & Home$HTS < 50.5 | Home$HTS > -50.5 & Home$HTS < -18, ]
+
+# Create Linear Regression Model for Away02 Second Half Scoring
+fit.Away02 <- lm(A.2H.Scoring ~ . , data = Away02)
+
+summary(fit.Away02)
+summary(fit.Away02)$coefficient
+AM02 <- summary(fit.Away02)$coefficient
+
+# Create Linear Regression Model for Home02 Second Half Scoring
+fit.Home02 <- lm(H.2H.Scoring ~ . , data = Home02)
+
+summary(fit.Home02)
+summary(fit.Home02)$coefficient
+HM02 <- summary(fit.Home02)$coefficient
+
+# Create Predicted Second Half Scoring Columns
+Away02$`PSH` <- AM02[1,1] + AM02[2,1]*Away02[,1] + AM02[3,1]*Away02[,2] + AM02[4,1]*Away02[,3] + AM02[5,1]*Away02[,4] +
+  AM02[6,1]*Away02[,5] +AM02[7,1]*Away02[,6] + AM02[8,1]*Away02[,7] + AM02[9,1]*Away02[,8] + AM02[10,1]*Away02[,9] +
+  AM02[11,1]*Away02[,10] + AM02[12,1]*Away02[,11] + AM02[13,1]*Away02[,12] + AM02[14,1]*Away02[,13] + AM02[15,1]*Away02[,14] +
+  AM02[16,1]*Away02[,15] + AM02[17,1]*Away02[,16] + AM02[18,1]*Away02[,17] + AM02[19,1]*Away02[,18] + AM02[20,1]*Away02[,19] +
+  AM02[21,1]*Away02[,20] + AM02[22,1]*Away02[,22] 
+
+Home02$`PSH` <- HM02[1,1] + HM02[2,1]*Home02[,1] + HM02[3,1]*Home02[,2] + HM02[4,1]*Home02[,3] + HM02[5,1]*Home02[,4] +
+  HM02[6,1]*Home02[,5] + HM02[7,1]*Home02[,6] + HM02[8,1]*Home02[,7] + HM02[9,1]*Home02[,8] + HM02[10,1]*Home02[,9] +
+  HM02[11,1]*Home02[,10] + HM02[12,1]*Home02[,11] + HM02[13,1]*Home02[,12] + HM02[14,1]*Home02[,13] + HM02[15,1]*Home02[,14] +
+  HM02[16,1]*Home02[,15] + HM02[17,1]*Home02[,16] + HM02[18,1]*Home02[,17] + HM02[19,1]*Home02[,18] + HM02[20,1]*Home02[,19] +
+  HM02[21,1]*Home02[,20] + HM02[22,1]*Home02[,22]
+
+# Create Linear Regression Model for Away24 Second Half Scoring
+fit.Away24 <- lm(A.2H.Scoring ~ . , data = Away24)
+
+summary(fit.Away24)
+summary(fit.Away24)$coefficient
+AM24 <- summary(fit.Away24)$coefficient
+
+# Create Linear Regression Model for Home24 Second Half Scoring
+fit.Home24 <- lm(H.2H.Scoring ~ . , data = Home24)
+
+summary(fit.Home24)
+summary(fit.Home24)$coefficient
+HM24 <- summary(fit.Home24)$coefficient
+
+# Create Predicted Second Half Scoring Columns
+Away24$`PSH` <- AM24[1,1] + AM24[2,1]*Away24[,1] + AM24[3,1]*Away24[,2] + AM24[4,1]*Away24[,3] + AM24[5,1]*Away24[,4] +
+  AM24[6,1]*Away24[,5] +AM24[7,1]*Away24[,6] + AM24[8,1]*Away24[,7] + AM24[9,1]*Away24[,8] + AM24[10,1]*Away24[,9] +
+  AM24[11,1]*Away24[,10] + AM24[12,1]*Away24[,11] + AM24[13,1]*Away24[,12] + AM24[14,1]*Away24[,13] + AM24[15,1]*Away24[,14] +
+  AM24[16,1]*Away24[,15] + AM24[17,1]*Away24[,16] + AM24[18,1]*Away24[,17] + AM24[19,1]*Away24[,18] + AM24[20,1]*Away24[,19] +
+  AM24[21,1]*Away24[,20] + AM24[22,1]*Away24[,22] 
+
+Home24$`PSH` <- HM24[1,1] + HM24[2,1]*Home24[,1] + HM24[3,1]*Home24[,2] + HM24[4,1]*Home24[,3] + HM24[5,1]*Home24[,4] +
+  HM24[6,1]*Home24[,5] + HM24[7,1]*Home24[,6] + HM24[8,1]*Home24[,7] + HM24[9,1]*Home24[,8] + HM24[10,1]*Home24[,9] +
+  HM24[11,1]*Home24[,10] + HM24[12,1]*Home24[,11] + HM24[13,1]*Home24[,12] + HM24[14,1]*Home24[,13] + HM24[15,1]*Home24[,14] +
+  HM24[16,1]*Home24[,15] + HM24[17,1]*Home24[,16] + HM24[18,1]*Home24[,17] + HM24[19,1]*Home24[,18] + HM24[20,1]*Home24[,19] +
+  HM24[21,1]*Home24[,20] + HM24[22,1]*Home24[,22]
+
+# Create Linear Regression Model for Away46 Second Half Scoring
+fit.Away46 <- lm(A.2H.Scoring ~ . , data = Away46)
+
+summary(fit.Away46)
+summary(fit.Away46)$coefficient
+AM46 <- summary(fit.Away46)$coefficient
+
+# Create Linear Regression Model for Home46 Second Half Scoring
+fit.Home46 <- lm(H.2H.Scoring ~ . , data = Home46)
+
+summary(fit.Home46)
+summary(fit.Home46)$coefficient
+HM46 <- summary(fit.Home46)$coefficient
+
+# Create Predicted Second Half Scoring Columns
+Away46$`PSH` <- AM46[1,1] + AM46[2,1]*Away46[,1] + AM46[3,1]*Away46[,2] + AM46[4,1]*Away46[,3] + AM46[5,1]*Away46[,4] +
+  AM46[6,1]*Away46[,5] +AM46[7,1]*Away46[,6] + AM46[8,1]*Away46[,7] + AM46[9,1]*Away46[,8] + AM46[10,1]*Away46[,9] +
+  AM46[11,1]*Away46[,10] + AM46[12,1]*Away46[,11] + AM46[13,1]*Away46[,12] + AM46[14,1]*Away46[,13] + AM46[15,1]*Away46[,14] +
+  AM46[16,1]*Away46[,15] + AM46[17,1]*Away46[,16] + AM46[18,1]*Away46[,17] + AM46[19,1]*Away46[,18] + AM46[20,1]*Away46[,19] +
+  AM46[21,1]*Away46[,20] + AM46[22,1]*Away46[,22] 
+
+Home46$`PSH` <- HM46[1,1] + HM46[2,1]*Home46[,1] + HM46[3,1]*Home46[,2] + HM46[4,1]*Home46[,3] + HM46[5,1]*Home46[,4] +
+  HM46[6,1]*Home46[,5] + HM46[7,1]*Home46[,6] + HM46[8,1]*Home46[,7] + HM46[9,1]*Home46[,8] + HM46[10,1]*Home46[,9] +
+  HM46[11,1]*Home46[,10] + HM46[12,1]*Home46[,11] + HM46[13,1]*Home46[,12] + HM46[14,1]*Home46[,13] + HM46[15,1]*Home46[,14] +
+  HM46[16,1]*Home46[,15] + HM46[17,1]*Home46[,16] + HM46[18,1]*Home46[,17] + HM46[19,1]*Home46[,18] + HM46[20,1]*Home46[,19] +
+  HM46[21,1]*Home46[,20] + HM46[22,1]*Home46[,22]
+
+# Create Linear Regression Model for Away610 Second Half Scoring
+fit.Away610 <- lm(A.2H.Scoring ~ . , data = Away610)
+
+summary(fit.Away610)
+summary(fit.Away610)$coefficient
+AM610 <- summary(fit.Away610)$coefficient
+
+# Create Linear Regression Model for Home610 Second Half Scoring
+fit.Home610 <- lm(H.2H.Scoring ~ . , data = Home610)
+
+summary(fit.Home610)
+summary(fit.Home610)$coefficient
+HM610 <- summary(fit.Home610)$coefficient
+
+# Create Predicted Second Half Scoring Columns
+Away610$`PSH` <- AM610[1,1] + AM610[2,1]*Away610[,1] + AM610[3,1]*Away610[,2] + AM610[4,1]*Away610[,3] +
+  AM610[5,1]*Away610[,4] + AM610[6,1]*Away610[,5] +AM610[7,1]*Away610[,6] + AM610[8,1]*Away610[,7] + AM610[9,1]*Away610[,8] +
+  AM610[10,1]*Away610[,9] + AM610[11,1]*Away610[,10] + AM610[12,1]*Away610[,11] + AM610[13,1]*Away610[,12] +
+  AM610[14,1]*Away610[,13] + AM610[15,1]*Away610[,14] + AM610[16,1]*Away610[,15] + AM610[17,1]*Away610[,16] +
+  AM610[18,1]*Away610[,17] + AM610[19,1]*Away610[,18] + AM610[20,1]*Away610[,19] + AM610[21,1]*Away610[,20] + 
+  AM610[22,1]*Away610[,22] 
+
+Home610$`PSH` <- HM610[1,1] + HM610[2,1]*Home610[,1] + HM610[3,1]*Home610[,2] + HM610[4,1]*Home610[,3] +
+  HM610[5,1]*Home610[,4] + HM610[6,1]*Home610[,5] + HM610[7,1]*Home610[,6] + HM610[8,1]*Home610[,7] + HM610[9,1]*Home610[,8] +
+  HM610[10,1]*Home610[,9] + HM610[11,1]*Home610[,10] + HM610[12,1]*Home610[,11] + HM610[13,1]*Home610[,12] +
+  HM610[14,1]*Home610[,13] + HM610[15,1]*Home610[,14] + HM610[16,1]*Home610[,15] + HM610[17,1]*Home610[,16] +
+  HM610[18,1]*Home610[,17] + HM610[19,1]*Home610[,18] + HM610[20,1]*Home610[,19] + HM610[21,1]*Home610[,20] +
+  HM610[22,1]*Home610[,22]
+
+# Combine Away and Home Data
+Data02 <-  cbind(Home02, Away02) 
+Data24 <-  cbind(Home24, Away24)
+Data46 <-  cbind(Home46, Away46)
+Data610 <- cbind(Home610, Away610)
+Data2 <- rbind(Data02, Data24, Data46, Data610)
+
+# Clear Environment
+rm(Home02, Home24, Home46, Home610, Away02, Away24, Away46, Away610, fit.Away02, fit.Away24, fit.Away46, fit.Away610, fit.Home02, fit.Home24, fit.Home46, fit.Home610, AM02, AM24, AM46, AM610, HM02, HM24, HM46, HM610, Data02, Data24, Data46, Data610)
+
+# Rename Columns
+names(Data2)[23] <- 'HPSH'
+names(Data2)[46] <- 'APSH'
+
+# Create Columns for First Half Scoring
+Data2$`H.H.Pts` <- (Data2$H.Q1.2PM * 2) + (Data2$H.Q1.3PM * 3) + (Data2$H.FTM) + (Data2$H.Q2.2PM * 2) + (Data2$H.Q2.3PM * 3)
+Data2$`A.H.Pts` <- (Data2$A.Q1.2PM * 2) + (Data2$A.Q1.3PM * 3) + (Data2$A.FTM) + (Data2$A.Q2.2PM * 2) + (Data2$A.Q2.3PM * 3)
+
+# Create Columns for Predicted Final Score
+Data2$`HPF` <- Data2$H.H.Pts + Data2$HPSH
+Data2$`APF` <- Data2$A.H.Pts + Data2$APSH
+
+# Create Columns for Actual Final Score
+Data2$`HF` <- Data2$H.H.Pts + Data2$H.2H.Scoring
+Data2$`AF` <- Data2$A.H.Pts + Data2$A.2H.Scoring
+
+# Create Column of Actual Spread Winner
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,52] + Data2[i, 45] > Data2[i, 51]){
+    Data2[i, 53] <- 'A'
+  }else{Data2[i, 53] <- 'H'}}
+
+# Rename Column of Spread Winner 
+names(Data2)[53] <- "SpreadWinner" 
+
+# Create Column of Predicted Spread Winner
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,50] + Data2[i, 45] > Data2[i, 49]){
+    Data2[i, 54] <- 'A'
+  }else{Data2[i, 54] <- 'H'}}
+
+# Rename Column of Predicted Spread Winner 
+names(Data2)[54] <- "PWinner" 
+
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,53] == Data2[i, 54]){
+    Data2[i, 55] <- 1
+  }else{Data2[i, 55] <- 0}}
+
+Data2$V55 <- as.numeric(Data2$V55)
+Right <- sum(Data2$V55)
+Num <- nrow(Data2)
+Wrong <- Num - Right
+``` 
+
+```{r Categorize Who Won the First Half thru Various Stats}
+# Home Stat for More 2PM
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,1] + Data2[i,10] > Data2[i, 24] + Data2[i,33]){
+    Data2[i, 56] <- 1
+  }else{Data2[i, 56] <- 0}}
+
+# Home Stat for More 3PM
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,4] + Data2[i,13] > Data2[i, 27] + Data2[i,36]){
+    Data2[i, 56] <- Data2[i, 56] + 1
+  }else{Data2[i, 56] <- Data2[i, 56] + 0}}
+
+# Home Stat for More FTM
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,19]  >  Data2[i,42]){
+    Data2[i, 56] <- Data2[i, 56] + 1
+  }else{Data2[i, 56] <- Data2[i, 56] + 0}}
+
+# Home Stat for More FTA
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,20]  >  Data2[i,43]){
+    Data2[i, 56] <- Data2[i, 56] + 1
+  }else{Data2[i, 56] <- Data2[i, 56] + 0}}
+
+# Home Stat for More Q1 Ast
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,8]  >  Data2[i,31]){
+    Data2[i, 56] <- Data2[i, 56] + 1
+  }else{Data2[i, 56] <- Data2[i, 56] + 0}}
+
+# Home Stat for More Q2 Ast
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,17]  >  Data2[i,40]){
+    Data2[i, 56] <- Data2[i, 56] + 1
+  }else{Data2[i, 56] <- Data2[i, 56] + 0}}
+
+# Away Stat for More 2PM
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,1] + Data2[i,10] < Data2[i, 24] + Data2[i,33]){
+    Data2[i, 57] <- 1
+  }else{Data2[i, 57] <- 0}}
+
+# Away Stat for More 3PM
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,4] + Data2[i,13] < Data2[i, 27] + Data2[i,36]){
+    Data2[i, 57] <- Data2[i, 57] + 1
+  }else{Data2[i, 57] <- Data2[i, 57] + 0}}
+
+# Away Stat for More FTM
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,19]  <  Data2[i,42]){
+    Data2[i, 57] <- Data2[i, 57] + 1
+  }else{Data2[i, 57] <- Data2[i, 57] + 0}}
+
+# Away Stat for More FTA
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,20]  <  Data2[i,43]){
+    Data2[i, 57] <- Data2[i, 57] + 1
+  }else{Data2[i, 57] <- Data2[i, 57] + 0}}
+
+# Home Stat for More Q1 Ast
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,8]  <  Data2[i,31]){
+    Data2[i, 57] <- Data2[i, 57] + 1
+  }else{Data2[i, 57] <- Data2[i, 57] + 0}}
+
+# Home Stat for More Q2 Ast
+for (i in 1:nrow(Data2)) {
+  if(Data2[i,17]  <  Data2[i,40]){
+    Data2[i, 57] <- Data2[i, 57] + 1
+  }else{Data2[i, 57] <- Data2[i, 57] + 0}}
+```
+
+```{r Remove Games where APF and HPF is too Close}
+
+Data2$`Dif` <- abs(Data2$HPF - Data2$APF)
+
+Data2$`SpreadDif` <- abs(Data2$Dif-abs(Data2$ATS))
+```
